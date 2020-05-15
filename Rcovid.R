@@ -1,10 +1,11 @@
-
-install.packages("tm")
+install.packages("cvms")
+install.packages("tidyverse")
 install.packages("NLP")
 install.packages("SnowballC")
 install.packages("wordcloud")
 install.packages("RColorBrewer")
-
+library(cvms)
+library(tidyverse)
 library(tm)
 library(NLP)
 library(SnowballC)
@@ -88,7 +89,7 @@ discurso = tm_map(discurso, removeNumbers)
 
 
 '''quitamos palabras genericas'''
-discurso=tm_map(discurso, removeWords,stopwords("english"))
+discurso=tm_map(discurso, removeWords, c(stopwords("english"), "zhang", "human", "usa", "kingdom", "korea", "institute", "national", "lee", "china", "univ", "cell", "london", "medical","coronavirus", "gene", "chen", "kong", "hong", "infectious", "animal", "wang", "diseases", "veterinary", "center", "centre", "college", "sciences", "school", "protein", "public", "control", "state", "liu", "clinical", "chinese", "van", "department", "affiliated", "united", "universit", "kim", "viral", "california", "vaccine"))
 
 ############### DATA FRAME DE PALABRAS CON SU FRECUENCIA
 
@@ -104,15 +105,15 @@ dataletras <- data.frame(word= names(vector),frequencia=vector)
 
 ################ GRAFICAMOS FRECUENCIA DE LAS PALABRAS
 
-barplot(dataletras[1:10,]$freq, las = 2, names.arg = dataletras[1:10,]$word,
-        col ="blue", main ="PALABRAS M?S FRECUENTES", ylab = "Frecuencia de palabras")
+barplot(dataletras[1:30,]$freq, las = 2, names.arg = dataletras[1:30,]$word,
+        col ="blue", main ="PALABRAS MÁS FRECUENTES", ylab = "Frecuencia de palabras")
 
 
 ############ GRAFICAMOS LA NUBE DE PALABRAS
 wordcloud(words = dataletras$word, freq = dataletras$freq, min.freq = 2,
           max.words=70)
 '''organizar la nube de palabras'''
-wordcloud(words = dataletras$word, freq = dataletras$freq, min.freq = 2,
-          max.words=70, random.order=FALSE, rot.per=0.2, 
-          colors=brewer.pal(8, "Dark2"))
+wordcloud(words = dataletras$word, freq = dataletras$freq, min.freq = 5,
+          max.words=150, random.order=FALSE, rot.per=0.2, 
+          colors=brewer.pal(7, "Dark2"))
 
