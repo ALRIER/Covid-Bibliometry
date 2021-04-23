@@ -1,119 +1,405 @@
-install.packages("cvms")
-install.packages("tidyverse")
-install.packages("NLP")
-install.packages("SnowballC")
-install.packages("wordcloud")
-install.packages("RColorBrewer")
-library(cvms)
-library(tidyverse)
-library(tm)
-library(NLP)
-library(SnowballC)
-library(RColorBrewer)
-library(wordcloud)
-library(dplyr)
-library(RefManageR)
-library(bibliometrix)
-library(quanteda)
-library(ggplot2)
-library(ggpubr)
+require(tidyverse)
+require(raster)
+require(sf)
+require(ggspatial)
 
-help("bibliometrix")
-help("igraph")
-help("network")
+pkg <- function(pkg){
+  new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+  if (length(new.pkg)) 
+    install.packages(new.pkg, dependencies = TRUE)
+  sapply(pkg, require, character.only = TRUE)
+}
 
-D <- readFiles("/home/alrier/Descargas/fullcovid.bib")
-M <- convert2df(D, dbsource = "scopus", format = "bibtex")
-N <- biblioAnalysis(M, sep = ";")
+packages <- c("tidyverse","cluster", "factoextra","NbClust","tidyr",
+              "cvms","tm","NLP","SnowballC","RColorBrewer","wordcloud",
+              "RefManageR","bibliometrix","quanteda","ggplot2",
+              "ggpubr","Factoshiny")
+pkg(packages)
 
-S <- summary(object = N, k = 20, pause = FALSE)
-plot(x = N, k = 20, pause = FALSE)
+#i set up the directori in hich im goint to work 
+setwd("/home/alrier/Documentos/bibliometrías/covid bibliometry/Covid-Bmtry-master") 
+#upload the document or dataset 
+file <- ("/home/alrier/Documentos/bibliometrías/covid bibliometry/Covid-Bmtry-master/s.bib") 
+#convert it into a Dataframe 
+M <- convert2df(file, dbsource = "scopus", format = "bibtex") 
 
-'''primera red matrici de datos cpn su grafica'''
-NetMatrix <- biblioNetwork(M, analysis = "co-occurrences", network = "author_keywords", sep = ";")
-P <- normalizeSimilarity(NetMatrix, type = "association")
-perrosnet <- networkPlot(P, n = 20, Title = "co-occurrence network", type = "fruchterman", 
-                         labelsize = 1, size = 10, size.cex = T, halo = T, cluster = "walktrap",
-                         remove.isolates = F, curved = 0.9, edgesize = 3,remove.multiple = T, noloops = T, weighted = TRUE)
-
-'''segunda red matricial de datos con su grafica'''
-NetMatrix2 <- biblioNetwork(M, analysis = "co-citation", network = "references", sep = ". ")
-n <- metaTagExtraction(M, Field = "AU_CO", sep = ";")
-NetMatrix3 <- biblioNetwork(n, analysis = "collaboration", network = "countries", sep = ";")
-net=networkPlot(NetMatrix3, n = 10, Title = "Country Collaboration", type = "fruchterman", labelsize = 1, size = 10, size.cex = T, halo = T, cluster = "spinglass",
-                remove.isolates = T, curved = 0.9, edgesize = 3,remove.multiple = T, noloops = T, weighted = TRUE)
+#create my summary
+S1 <- biblioAnalysis(M, sep = ";") 
+options(width=100) 
+S2 <- summary(object = S1, k = 20, pause = FALSE) 
+#first general plots
+plot(x = S1, k = 20, pause = FALSE) 
 
 
 
-'''Del total de resultados, extraigo los papers más citados'''
-AU <- N$MostCitedPapers 
-AUT <- AU[1:2]
-View(AUT)
-View(AU)
+#'''Paso los documentos a formato tibble para trabajar un filtro  
+#por años a partir del año 2018 en adelante, pero es solo para hacer 
+#un análisis más liviano, después puedo retomar el objeto M que es un  
+#DF y contiene todos los resultados'''  
+#N1 <- as_tibble(M) 
+#N2<- N1 %>% filter(PY >=2018) 
+#convierto nuevamente a DF para continuar trabajando sobre mi filtro 
+#M1 <- as.data.frame(N2) 
+#agrupo y resumo resultados 
 
-'''Lets see most productive countries'''
-Paises <- N$Countries
-Paises <- S$MostProdCountries
-View(Paises)
-'''Lets keep the first and thirs column of this dataframe'''
-Paises <- Paises[c(1, 3)]
-'''Lets change the name of the first column'''
-names(Paises)[1] <- "Country"
-'''Pongamos los nombres en Español'''
-Paises$Country <- c("USA", "Taiwan", "Korea",  "Reino Unido", "Alemania", "Holanda", "Italia", "Canada", "España", "China")
-Paises$Freq <- suppressWarnings(as.numeric(Paises$Freq))
-'''Lets see the production'''
-Produccion <- S$AnnualProduction
-'''Lets change the name of the first column'''
-names(Produccion)[1] <- "Year"
-'''Lets set as numeric the records of the second column'''
-Produccion$Articles <- as.numeric(Produccion$Articles)
+#To obtain the most frequent cited manuscripts: 
+CR <- citations(M, field = "article", sep = ";") 
+MFCM<-cbind(CR$Source[1:10]) 
+view(MFCM)
+write.table(MFCM, file="most frequent cited manuscripts source 
+            covid.csv", sep=";", row.names= T) 
 
-'''graficas y plots'''
+#I will extract the most cited paperd and manualy i will look for the 
+#info about each one of those articles###################
+b<-S2$MostCitedPapers
+write.table(b, file="MostCitedPapers.csv", sep=";", row.names= T) 
+#To obtain the most frequent cited first authors: 
+CR1 <- citations(M, field = "author", sep = ";") 
+MFCA<-cbind(CR$Year[1:15])
+view(MFCA)
+write.table(MFCA, file="most frequent cited AUTHORSfull.csv", sep=";",
+            row.names= T) 
+s<- CR$Authors[1:15,]
+#Authors’ Dominance ranking 
+DF <- dominance(S1, k = 10) 
+write.table(DF, file="Dominance covid.csv", sep=";", row.names= T) 
 
-Fig1A <- ggplot(Paises, aes(x=reorder(Country, Freq) , y=Freq)) + geom_bar(stat = "identity", fill="blue") + coord_flip() + xlab("Country") + ylab("Frequency")
-Fig1B <- ggplot(Produccion, aes(x=Year , y=Articles)) + geom_bar(stat = "identity", fill="blue") + xlab("Year") + ylab("Articles") + theme(axis.text.x = element_text(angle = 90, hjust = 1))
-ggarrange (Fig1A, Fig1B, labels = c("A", "B"), ncol = 2, nrow = 1)
-
-
-'''Minería de datos'''
-texto = Corpus(VectorSource(N)) 
-'''minuscula (A!=a)'''
-discurso=tm_map(texto, tolower)
-'''quitamos los espacios en blanco'''
-discurso =tm_map(discurso, stripWhitespace)
-'''quitamos la puntuacion'''
-discurso = tm_map(discurso, removePunctuation)
-'''quitamos los numeros'''
-discurso = tm_map(discurso, removeNumbers)
+#########################Authors’ h-index############################# 
+authors=gsub(","," ",names(S1$Authors)[1:10]) 
+indices <- Hindex(M, field = "author", elements=authors, sep = ";", 
+                  years = 50) 
 
 
-'''quitamos palabras genericas'''
-discurso=tm_map(discurso, removeWords, c(stopwords("english"), "zhang", "human", "usa", "kingdom", "korea", "institute", "national", "lee", "china", "univ", "cell", "london", "medical","coronavirus", "gene", "chen", "kong", "hong", "infectious", "animal", "wang", "diseases", "veterinary", "center", "centre", "college", "sciences", "school", "protein", "public", "control", "state", "liu", "clinical", "chinese", "van", "department", "affiliated", "united", "universit", "kim", "viral", "california", "vaccine"))
+indices$H
+indices$CitationList
+cl2<-citationslist[[2]]
+view(cl)
+write.table(cl, file="citationslist.csv", sep=";", row.names= T) 
 
-############### DATA FRAME DE PALABRAS CON SU FRECUENCIA
+#Top-Authors’ Productivity over the Time 
+topAU <- authorProdOverTime(M, k = 10, graph = TRUE) 
 
-'''Creamos matriz de letras'''
-letras= TermDocumentMatrix(discurso)
-findFreqTerms(letras, lowfreq=5)
-matrix=as.matrix(letras)
+## Table: Author's productivity per year 
+top<-topAU$dfAU
+write.table(top, file="productividadxaño.csv", sep=";", row.names= T) 
+#Bipartite networks 
+A <- cocMatrix(M, Field = "SO", sep = ";") 
+a1<-sort(Matrix::colSums(A), decreasing = TRUE)[1:10] 
+view(a1) 
 
-'''lo ordenamos y sumamos las letras de nuestra matriz'''
-vector <- sort(rowSums(matrix),decreasing=TRUE) 
-'''creamos la data con las palabras y su frecuencia'''
-dataletras <- data.frame(word= names(vector),frequencia=vector) 
+#Citation network 
+cit <- cocMatrix(M, Field = "CR", sep = ".  ") 
+cit1<-sort(Matrix::colSums(cit), decreasing = TRUE)[1:10] 
+view(cit1) 
 
-################ GRAFICAMOS FRECUENCIA DE LAS PALABRAS
+#Author network 
+AUTors <- cocMatrix(M, Field = "AU", sep = ";") 
+AUTors1<-sort(Matrix::colSums(AUTors), decreasing = TRUE)[1:10] 
+view(AUTors1) 
 
-barplot(dataletras[1:30,]$freq, las = 2, names.arg = dataletras[1:30,]$word,
-        col ="blue", main ="PALABRAS MÁS FRECUENTES", ylab = "Frecuencia de palabras")
+#Country network 
+country <- metaTagExtraction(M, Field = "AU_CO", sep = ";") 
+C <- cocMatrix(country, Field = "AU_CO", sep = ";") 
+C <-sort(Matrix::colSums(C), decreasing = TRUE)[1:10] 
+view(C) 
+
+# Create keyword co-occurrences network 
+cooccurrences <- biblioNetwork(M, analysis = "co-occurrences", 
+                               network = "keywords", sep = ";") 
+net=networkPlot(cooccurrences, normalize="association", weighted=T, 
+                n = 10, Title = "Keyword Co-occurrences", 
+                type = "fruchterman", size=T,edgesize = 5,
+                labelsize=0.7) 
+
+#Bibliographic co-citation 
+cocitation <- biblioNetwork(M, analysis = "co-citation", 
+                            network = "references", sep = ".  ") 
+net=networkPlot(cocitation, normalize="association", weighted=T, 
+                n = 10, Title = "co-citation", type = "fruchterman", 
+                size=T,edgesize = 5,labelsize=0.7) 
+
+#Bibliographic collaboration 
+collaboration <- biblioNetwork(M, analysis = "collaboration", 
+                               network = "authors", sep = ";") 
+net=networkPlot(collaboration, n = 10, Title = "Collaboration", 
+                type = "circle", size=TRUE, remove.multiple=F,
+                labelsize=0.7,cluster="none")
+
+# Conceptual Structure using keywords (method="CA") 
+CS <- conceptualStructure(M, field="ID", method="CA", minDegree=4, 
+                          clust=2, stemming=FALSE, labelsize=10, 
+                          documents=10) 
+
+# Conceptual Structure using keywords (method="CA") 
+
+t<-as.tibble(M) 
+ti<- t %>% filter(PY==2021) 
+tib<- as.data.frame(ti) 
+CS <- conceptualStructure(tib,field="ID", method="MCA", minDegree=4, 
+                          clust=3, stemming=FALSE, labelsize=10, 
+                          documents=3)
+# Create a country collaboration network 
+countrycolab <- metaTagExtraction(M, Field = "AU_CO", sep = ";") 
+countrycolab <- biblioNetwork(countrycolab, analysis = "collaboration", network = "countries", sep = ";") 
+net=networkPlot(countrycolab, n = 4, Title = "Country Collaboration", type = "circle", size=TRUE, remove.multiple=F,labelsize=0.7,cluster="none") 
+
+#Create a historical citation network 
+t1<-as.tibble(M) 
+ti2<- t1 %>% filter(PY >=2021) 
+tib3<- as.data.frame(ti2) 
+class(M) <- c("bibliometrixDB", "data.frame") 
+options(width=130) 
+histResults <- histNetwork(M, min.citations = 1, sep = ";") 
+# Plot a historical co-citation network 
+histPlot(histResults, n = 65, size = 4, labelsize = 4, verbose = TRUE) 
+
+#Top authors prod-over time 
+topAU <- authorProdOverTime(M, k = 10, graph = TRUE) 
+topAU 
+topAU$dfAU 
+
+#Del total de resultados, extraigo los papers más citados 
+'''los puedo retirar del sumario o del total de observaciones''' 
+'''Estraidos del total de observaciones''' 
+AU <- S2$MostCitedPapers 
+
+'''Extraidos del sumario -> de aquí va a estraer los 20 más  
+importantes, o el número de observaciones que yo haya pedido a R''' 
+AU1 <- S2$MostCitedPapers 
+AUT <- AU1[1:2] 
+View(AUT) 
+View(AU) 
+
+'''hago lo mismo con los países''' 
+Paises <- S2$Countries 
+Paises <- S2$MostProdCountries 
+View(Paises) 
+Paises <- Paises[c(1, 3)] 
+
+'''re nombro la columna paises''' 
+
+names(Paises)[1] <- "Country" 
+
+#'''esto aplica solo para revistas en español''' 
+
+#Paises$Country <- c("USA", "Taiwan", "Korea",  "Reino Unido", "Alemania", "Holanda", "Italia", "Canada", "España", "China") 
+
+'''quito algonos errores''' 
+
+Paises$Freq <- suppressWarnings(as.numeric(Paises$Freq)) 
+
+'''miro los años de producción''' 
+
+Produccion <- S2$AnnualProduction 
+
+names(Produccion)[1] <- "Year" 
+
+'''seteo la segunda columna como numerica''' 
+
+Produccion$Articles <- as.numeric(Produccion$Articles) 
+
+'''revisemos los keywords''' 
+
+key<- S2$MostRelKeywords 
+
+key <- key[c(1, 2)] 
+
+plot(key) 
+
+'''graficas y plots''' 
+
+Fig1A <- ggplot(Paises, aes(x=reorder(Country, Freq) , y=Freq)) + geom_bar(stat = "identity", fill="blue") + coord_flip() + xlab("Country") + ylab("Frequency") 
+
+Fig1B <- ggplot(Produccion, aes(x=Year , y=Articles)) + geom_bar(stat = "identity", fill="blue") + xlab("Year") + ylab("Articles") + theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+
+ggarrange (Fig1A, Fig1B, labels = c("A", "B"), ncol = 2, nrow = 1) 
 
 
-############ GRAFICAMOS LA NUBE DE PALABRAS
-wordcloud(words = dataletras$word, freq = dataletras$freq, min.freq = 2,
-          max.words=70)
-'''organizar la nube de palabras'''
-wordcloud(words = dataletras$word, freq = dataletras$freq, min.freq = 5,
-          max.words=150, random.order=FALSE, rot.per=0.2, 
-          colors=brewer.pal(7, "Dark2"))
 
+'''graficas y plots por citas y palabras clave''' 
+
+Fig1A <- ggplot(key, aes(x=1 , y=2)) + geom_bar(stat = "identity", fill="blue") + coord_flip() + xlab("KeyWords") + ylab("Articles") 
+
+Fig1B <- ggplot(AUT, aes(x=2 , y=1)) + geom_bar(stat = "identity", fill="blue") + xlab("Paper") + ylab("TotalC") + theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+
+ggarrange (Fig1A, Fig1B, labels = c("A", "B"), ncol = 2, nrow = 1) 
+
+plot(Fig1A) 
+
+#este trabajo de minería se hace sobre el total de observaciones N3. 
+
+'''Minería de datos''' 
+
+texto = Corpus(VectorSource(S2$MostRelKeywords))  
+
+'''minuscula (A!=a)''' 
+
+discurso=tm_map(texto, tolower) 
+
+'''quitamos los espacios en blanco''' 
+
+discurso =tm_map(discurso, stripWhitespace) 
+
+'''quitamos la puntuacion''' 
+
+discurso = tm_map(discurso, removePunctuation) 
+
+'''quitamos los numeros''' 
+
+discurso = tm_map(discurso, removeNumbers) 
+
+
+
+
+
+'''quitamos palabras genericas y todas las que  
+
+molesten en el resultado. PDT: hay que cambiar la lista de  
+
+palabras que es de otra bibliometría''' 
+
+discurso=tm_map(discurso, removeWords, c(stopwords("english"), "ddimer","ccovid","covid","zhang", "human", "usa", "kingdom", "korea", "institute", "national", "lee", "china", "univ", "cell", "london", "medical","coronavirus", "gene", "chen", "kong", "hong", "infectious", "animal", "wang", "diseases", "veterinary", "center", "centre", "college", "sciences", "school", "protein", "public", "control", "state", "liu", "clinical", "chinese", "van", "department", "affiliated", "united", "universit", "kim", "viral", "california", "vaccine")) 
+
+
+
+############### DATA FRAME DE PALABRAS CON SU FRECUENCIA 
+
+
+
+'''Creamos matriz de letras''' 
+
+letras= TermDocumentMatrix(discurso) 
+
+findFreqTerms(letras, lowfreq=1) 
+
+matrix=as.matrix(letras) 
+
+
+
+'''lo ordenamos y sumamos las letras de nuestra matriz''' 
+
+vector <- sort(rowSums(matrix),decreasing=TRUE)  
+
+'''creamos la data con las palabras y su frecuencia''' 
+
+dataletras <- data.frame(word= names(vector),frequencia=vector)  
+
+
+
+################ GRAFICAMOS FRECUENCIA DE LAS PALABRAS 
+
+
+
+barplot(dataletras[1:10,]$freq, las = 2, names.arg = dataletras[1:10,]$word, 
+        
+        col ="blue", main ="Most Relevant Keywords", ylab = "Frecuencia de palabras") 
+
+
+
+
+
+############ GRAFICAMOS LA NUBE DE PALABRAS 
+
+wordcloud(words = dataletras$word, freq = dataletras$freq, min.freq = 1, 
+          
+          max.words=70) 
+
+'''organizar la nube de palabras''' 
+
+wordcloud(words = dataletras$word, freq = dataletras$freq, min.freq = 1, 
+          
+          max.words=150, random.order=FALSE, rot.per=0.2,  
+          
+          colors=brewer.pal(7, "Dark2")) 
+
+
+
+#Este trabajo de minería se hace sobre los keyWords 
+
+'''Minería de datos''' 
+
+texto = Corpus(VectorSource(key))  
+
+'''minuscula (A!=a)''' 
+
+discurso=tm_map(texto, tolower) 
+
+'''quitamos los espacios en blanco''' 
+
+discurso =tm_map(discurso, stripWhitespace) 
+
+'''quitamos la puntuacion''' 
+
+discurso = tm_map(discurso, removePunctuation) 
+
+'''quitamos los numeros''' 
+
+discurso = tm_map(discurso, removeNumbers) 
+
+
+
+
+
+'''quitamos palabras genericas y todas las que  
+
+molesten en el resultado. PDT: hay que cambiar la lista de  
+
+palabras que es de otra bibliometría''' 
+
+discurso=tm_map(discurso, removeWords, c(stopwords("english"), "zhang", "human", "usa", "kingdom", "korea", "institute", "national", "lee", "china", "univ", "cell", "london", "medical","coronavirus", "gene", "chen", "kong", "hong", "infectious", "animal", "wang", "diseases", "veterinary", "center", "centre", "college", "sciences", "school", "protein", "public", "control", "state", "liu", "clinical", "chinese", "van", "department", "affiliated", "united", "universit", "kim", "viral", "california", "vaccine")) 
+
+
+
+############### DATA FRAME DE PALABRAS CON SU FRECUENCIA 
+
+
+
+'''Creamos matriz de letras''' 
+
+letras= TermDocumentMatrix(discurso) 
+
+findFreqTerms(letras, lowfreq=5) 
+
+matrix=as.matrix(letras) 
+
+
+
+'''lo ordenamos y sumamos las letras de nuestra matriz''' 
+
+vector <- sort(rowSums(matrix),decreasing=TRUE)  
+
+'''creamos la data con las palabras y su frecuencia''' 
+
+dataletras <- data.frame(word= names(vector),frequencia=vector)  
+
+
+
+################ GRAFICAMOS FRECUENCIA DE LAS PALABRAS 
+
+
+
+barplot(dataletras[1:30,]$freq, las = 2, names.arg = dataletras[1:30,]$word, 
+        
+        col ="blue", main ="PALABRAS MÁS FRECUENTES", ylab = "Frecuencia de palabras") 
+
+
+
+
+
+############ GRAFICAMOS LA NUBE DE PALABRAS 
+
+wordcloud(words = dataletras$word, freq = dataletras$freq, min.freq = 2, 
+          
+          max.words=70) 
+
+'''organizar la nube de palabras''' 
+
+wordcloud(words = dataletras$word, freq = dataletras$freq, min.freq = 5, 
+          
+          max.words=150, random.order=FALSE, rot.per=0.2,  
+          
+          colors=brewer.pal(7, "Dark2")) 
+
+
+
+################# Leer manual CVMS para crossmodalidad.
