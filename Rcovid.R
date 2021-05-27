@@ -2,18 +2,19 @@ require(tidyverse)
 require(raster)
 require(sf)
 require(ggspatial)
-
+#wit this function i set up my packages and tell the computet that i need to install wich is not instaled. 
 pkg <- function(pkg){
   new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
   if (length(new.pkg)) 
     install.packages(new.pkg, dependencies = TRUE)
   sapply(pkg, require, character.only = TRUE)
 }
-
+#with this code i can call al the packager i need. 
 packages <- c("tidyverse","cluster", "factoextra","NbClust","tidyr",
               "cvms","tm","NLP","SnowballC","RColorBrewer","wordcloud",
               "RefManageR","bibliometrix","quanteda","ggplot2",
-              "ggpubr","Factoshiny")
+              "ggpubr","Factoshiny", "xtable")
+#i call my function with the packages and the orders. 
 pkg(packages)
 
 #i set up the directori in hich im goint to work 
