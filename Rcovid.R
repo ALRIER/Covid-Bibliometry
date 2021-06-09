@@ -450,11 +450,57 @@ K<-order(-mod3$fitted.values)
 K
 paisord<-pais[K]
 paisord
+
+
+##########################################################################
+################# Moldelos lineales generalizados ########################
+##########################################################################
+
+summary(M)
+view(P)
+N<-M[,c(13,20,23,24,34,35)]
+P<-na.omit(N)
+P$TC<-as.numeric(P$TC)
+P$PN<-as.numeric(P$PN)
+P$VL<-as.numeric(P$VL)
+P<-na.omit(P)
+attach(P)
+mod1<-glm(TC~PY+PN+DT+VL+PY*DT,family= poisson(link = "log"))
+S<-summary(mod1)
+library(xtable)
+xtable(S)
+write.table(S, file="Modelo2.csv", sep=";", row.names= T)
+####################################################################
+###Modelos sobre S2 que es una variable trabajada en bibliometrix###
+####################################################################
+attach(S2)
+
+year<-AnnualProduction$`Year   `
+article<-AnnualProduction$Articles
+mod2<-glm(article~year,family= poisson(link = "log"))
+S2<-summary(mod2)
+S2
+library(xtable)
+xtable(S)
+write.table(S, file="Modelo2.csv", sep=";", row.names= T)
+#MODELO3
+pais<-TCperCountries$Country
+TC<-as.numeric(TCperCountries$`Total Citations`)
+Freq<-as.numeric(MostProdCountries$Freq)
+mod3<-glm(TC~Freq,family=poisson(link = "log"))
+S3<-summary(mod3)
+S3
+K<-order(-mod3$fitted.values)
+K
+paisord<-pais[K]
+paisord
 exp(mod3$coefficients)
 library(xtable)
 xtable(S)
 write.table(S, file="Modelo2.csv", sep=";", row.names= T)
-
-#MODELO4
+exp(mod3$coefficients)
+library(xtable)
+xtable(S)
+write.table(S, file="Modelo2.csv", sep=";", row.names= T)
 
 
