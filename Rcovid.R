@@ -11,11 +11,12 @@ pkg <- function(pkg){
 }
 #with this code i can call al the packager i need. 
 #here's all packages i usually need for this and other projects too. 
-packages <- c("tidyverse", "raster","sf" ,"ggspatial","cluster", "factoextra",
-              "NbClust","tidyr", "forecast", "semPlot", "semTools", "corrplot", "corrr",
-              "haven", "psych", "dplyr", "lavaan", "readr", "cvms","tm","NLP",
-              "SnowballC","RColorBrewer","wordcloud", "RefManageR",
-              "bibliometrix","quanteda","ggplot2", "ggpubr","Factoshiny")
+packages <- c("tidyverse","raster","sf","ggspatial","cluster","factoextra",
+              "NbClust","tidyr","forecast","semPlot","semTools","corrplot",
+              "corrr","haven","psych","dplyr","lavaan","readr","cvms","tm",
+              "NLP","SnowballC","RColorBrewer","wordcloud","wordcloud2",
+              "RefManageR","bibliometrix","GGally","quanteda","ggplot2",
+              "ggpubr","Factoshiny","syuzhet","tm","RColorBrewer","tokenizers")
 #i call my function with the packages and the orders. 
 pkg(packages)
 
